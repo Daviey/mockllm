@@ -1,0 +1,125 @@
+{
+  "name": "anthropic",
+  "version": "2024-01-01",
+  "base_path": "",
+  "endpoints": [
+    {
+      "path": "/v1/messages",
+      "method": "POST",
+      "responses": [
+        {
+          "status": 200,
+          "label": "success",
+          "headers": { "Content-Type": "application/json", "anthropic-ratelimit-requests-limit": "1000", "anthropic-ratelimit-requests-remaining": "999" },
+          "body": {
+            "id": "msg_dummy_mock",
+            "type": "message",
+            "role": "assistant",
+            "content": [{ "type": "text", "text": "This is a mock response from mockllm." }],
+            "model": "claude-3-opus-20240229",
+            "stop_reason": "end_turn",
+            "stop_sequence": null,
+            "usage": { "input_tokens": 10, "output_tokens": 10 }
+          }
+        },
+        {
+          "status": 200,
+          "label": "streaming",
+          "stream": true,
+          "stream_chunks": [
+            { "delay": "50ms", "data": { "type": "message_start", "message": { "id": "msg_dummy_mock", "type": "message", "role": "assistant", "content": [], "model": "claude-3-opus-20240229", "stop_reason": null, "stop_sequence": null, "usage": { "input_tokens": 10, "output_tokens": 0 } } } },
+            { "delay": "50ms", "data": { "type": "content_block_start", "index": 0, "content_block": { "type": "text", "text": "" } } },
+            { "delay": "50ms", "data": { "type": "content_block_delta", "index": 0, "delta": { "type": "text_delta", "text": "This is a mock" } } },
+            { "delay": "50ms", "data": { "type": "content_block_delta", "index": 0, "delta": { "type": "text_delta", "text": " streaming response." } } },
+            { "delay": "50ms", "data": { "type": "content_block_stop", "index": 0 } },
+            { "delay": "50ms", "data": { "type": "message_delta", "delta": { "stop_reason": "end_turn", "stop_sequence": null }, "usage": { "output_tokens": 10 } } },
+            { "delay": "10ms", "data": { "type": "message_stop" } }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/v1/messages/errors/sequential",
+      "method": "POST",
+      "match_mode": "sequential",
+      "responses": [
+        {
+          "status": 200,
+          "label": "success",
+          "body": {
+            "id": "msg_dummy_mock",
+            "type": "message",
+            "role": "assistant",
+            "content": [{ "type": "text", "text": "OK" }],
+            "model": "claude-3-opus-20240229",
+            "stop_reason": "end_turn",
+            "usage": { "input_tokens": 5, "output_tokens": 1 }
+          }
+        },
+        {
+          "status": 429,
+          "label": "rate_limit",
+          "body": {
+            "type": "error",
+            "error": { "type": "rate_limit_error", "message": "Number of request tokens has exceeded your rate limit." }
+          }
+        },
+        {
+          "status": 529,
+          "label": "overloaded",
+          "body": {
+            "type": "error",
+            "error": { "type": "overloaded_error", "message": "Overloaded" }
+          }
+        },
+        {
+          "status": 500,
+          "label": "server_error",
+          "body": {
+            "type": "error",
+            "error": { "type": "api_error", "message": "Internal server error." }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/v1/messages/errors/weighted",
+      "method": "POST",
+      "match_mode": "weighted",
+      "responses": [
+        {
+          "status": 200,
+          "weight": 80,
+          "label": "success",
+          "body": {
+            "id": "msg_dummy_mock",
+            "type": "message",
+            "role": "assistant",
+            "content": [{ "type": "text", "text": "OK" }],
+            "model": "claude-3-opus-20240229",
+            "stop_reason": "end_turn",
+            "usage": { "input_tokens": 5, "output_tokens": 1 }
+          }
+        },
+        {
+          "status": 429,
+          "weight": 10,
+          "label": "rate_limit",
+          "body": { "type": "error", "error": { "type": "rate_limit_error", "message": "Number of request tokens has exceeded your rate limit." } }
+        },
+        {
+          "status": 529,
+          "weight": 5,
+          "label": "overloaded",
+          "body": { "type": "error", "error": { "type": "overloaded_error", "message": "Overloaded" } }
+        },
+        {
+          "status": 500,
+          "weight": 5,
+          "label": "server_error",
+          "body": { "type": "error", "error": { "type": "api_error", "message": "Internal server error." } }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "name": "gemini",
+  "version": "2024-01-01",
+  "base_path": "/v1beta",
+  "endpoints": [
+    {
+      "path": "/models/gemini-pro:generateContent",
+      "method": "POST",
+      "responses": [
+        {
+          "status": 200,
+          "label": "success",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "candidates": [{ "content": { "parts": [{ "text": "This is a mock response from mockllm." }], "role": "model" }, "finishReason": "STOP", "index": 0 }],
+            "usageMetadata": { "promptTokenCount": 10, "candidatesTokenCount": 10, "totalTokenCount": 20 }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/models/gemini-pro:generateContent/errors/sequential",
+      "method": "POST",
+      "match_mode": "sequential",
+      "responses": [
+        {
+          "status": 200,
+          "label": "success",
+          "body": {
+            "candidates": [{ "content": { "parts": [{ "text": "OK" }], "role": "model" }, "finishReason": "STOP", "index": 0 }],
+            "usageMetadata": { "promptTokenCount": 5, "candidatesTokenCount": 1, "totalTokenCount": 6 }
+          }
+        },
+        {
+          "status": 429,
+          "label": "rate_limit",
+          "body": { "error": { "code": 429, "message": "Resource exhausted", "status": "RESOURCE_EXHAUSTED" } }
+        },
+        {
+          "status": 503,
+          "label": "unavailable",
+          "body": { "error": { "code": 503, "message": "The model is overloaded", "status": "UNAVAILABLE" } }
+        }
+      ]
+    },
+    {
+      "path": "/models/gemini-pro:generateContent/errors/weighted",
+      "method": "POST",
+      "match_mode": "weighted",
+      "responses": [
+        {
+          "status": 200,
+          "weight": 85,
+          "label": "success",
+          "body": {
+            "candidates": [{ "content": { "parts": [{ "text": "OK" }], "role": "model" }, "finishReason": "STOP", "index": 0 }],
+            "usageMetadata": { "promptTokenCount": 5, "candidatesTokenCount": 1, "totalTokenCount": 6 }
+          }
+        },
+        {
+          "status": 429,
+          "weight": 10,
+          "label": "rate_limit",
+          "body": { "error": { "code": 429, "message": "Resource exhausted", "status": "RESOURCE_EXHAUSTED" } }
+        },
+        {
+          "status": 503,
+          "weight": 5,
+          "label": "unavailable",
+          "body": { "error": { "code": 503, "message": "The model is overloaded", "status": "UNAVAILABLE" } }
+        }
+      ]
+    },
+    {
+      "path": "/models/gemini-pro:streamGenerateContent",
+      "method": "POST",
+      "responses": [
+        {
+          "status": 200,
+          "stream": true,
+          "stream_chunks": [
+            { "delay": "50ms", "data": { "candidates": [{ "content": { "parts": [{ "text": "This is a mock" }], "role": "model" }, "finishReason": "STOP", "index": 0 }] } },
+            { "delay": "50ms", "data": { "candidates": [{ "content": { "parts": [{ "text": " streaming response." }], "role": "model" }, "finishReason": "STOP", "index": 0 }] } }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/models/text-embedding-004:embedContent",
+      "method": "POST",
+      "responses": [
+        {
+          "status": 200,
+          "body": { "embedding": { "values": [0.0023064255, -0.009327292, -0.0028842222, 0.012763155] } }
+        }
+      ]
+    },
+    {
+      "path": "/models",
+      "method": "GET",
+      "responses": [
+        {
+          "status": 200,
+          "body": {
+            "models": [
+              { "name": "models/gemini-pro", "displayName": "Gemini Pro", "inputTokenLimit": 30720, "outputTokenLimit": 2048, "supportedGenerationMethods": ["generateContent", "streamGenerateContent"] },
+              { "name": "models/text-embedding-004", "displayName": "Text Embedding 004", "inputTokenLimit": 2048, "outputTokenLimit": 1, "supportedGenerationMethods": ["embedContent"] }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

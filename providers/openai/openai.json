@@ -1,0 +1,219 @@
+{
+  "name": "openai",
+  "version": "2024-01-01",
+  "base_path": "/v1",
+  "endpoints": [
+    {
+      "path": "/chat/completions",
+      "method": "POST",
+      "responses": [
+        {
+          "status": 200,
+          "label": "success",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "id": "chatcmpl-dummymock",
+            "object": "chat.completion",
+            "created": 1700000000,
+            "model": "gpt-4",
+            "choices": [
+              {
+                "index": 0,
+                "message": { "role": "assistant", "content": "This is a mock response from mockllm." },
+                "finish_reason": "stop"
+              }
+            ],
+            "usage": { "prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20 }
+          }
+        },
+        {
+          "status": 200,
+          "label": "streaming",
+          "stream": true,
+          "stream_chunks": [
+            {
+              "delay": "50ms",
+              "data": { "id": "chatcmpl-dummymock", "object": "chat.completion.chunk", "created": 1700000000, "model": "gpt-4", "choices": [{ "index": 0, "delta": { "role": "assistant", "content": "" }, "finish_reason": null }] }
+            },
+            {
+              "delay": "50ms",
+              "data": { "id": "chatcmpl-dummymock", "object": "chat.completion.chunk", "created": 1700000000, "model": "gpt-4", "choices": [{ "index": 0, "delta": { "content": "This is a mock" }, "finish_reason": null }] }
+            },
+            {
+              "delay": "50ms",
+              "data": { "id": "chatcmpl-dummymock", "object": "chat.completion.chunk", "created": 1700000000, "model": "gpt-4", "choices": [{ "index": 0, "delta": { "content": " streaming response." }, "finish_reason": null }] }
+            },
+            {
+              "delay": "50ms",
+              "data": { "id": "chatcmpl-dummymock", "object": "chat.completion.chunk", "created": 1700000000, "model": "gpt-4", "choices": [{ "index": 0, "delta": {}, "finish_reason": "stop" }] }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/chat/completions/errors/sequential",
+      "method": "POST",
+      "match_mode": "sequential",
+      "responses": [
+        {
+          "status": 200,
+          "label": "success",
+          "body": {
+            "id": "chatcmpl-dummymock",
+            "object": "chat.completion",
+            "created": 1700000000,
+            "model": "gpt-4",
+            "choices": [{ "index": 0, "message": { "role": "assistant", "content": "OK" }, "finish_reason": "stop" }],
+            "usage": { "prompt_tokens": 5, "completion_tokens": 1, "total_tokens": 6 }
+          }
+        },
+        {
+          "status": 429,
+          "label": "rate_limit",
+          "headers": { "Retry-After": "2" },
+          "body": {
+            "error": {
+              "message": "Rate limit reached for default-gpt-4 in your organization.",
+              "type": "rate_limit_error",
+              "param": null,
+              "code": "rate_limit_exceeded"
+            }
+          }
+        },
+        {
+          "status": 500,
+          "label": "server_error",
+          "body": {
+            "error": {
+              "message": "The server had an error processing your request.",
+              "type": "server_error",
+              "param": null,
+              "code": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/chat/completions/errors/weighted",
+      "method": "POST",
+      "match_mode": "weighted",
+      "responses": [
+        {
+          "status": 200,
+          "weight": 80,
+          "label": "success",
+          "body": {
+            "id": "chatcmpl-dummymock",
+            "object": "chat.completion",
+            "created": 1700000000,
+            "model": "gpt-4",
+            "choices": [{ "index": 0, "message": { "role": "assistant", "content": "OK" }, "finish_reason": "stop" }],
+            "usage": { "prompt_tokens": 5, "completion_tokens": 1, "total_tokens": 6 }
+          }
+        },
+        {
+          "status": 429,
+          "weight": 12,
+          "label": "rate_limit",
+          "headers": { "Retry-After": "2" },
+          "body": {
+            "error": {
+              "message": "Rate limit reached for default-gpt-4 in your organization.",
+              "type": "rate_limit_error",
+              "param": null,
+              "code": "rate_limit_exceeded"
+            }
+          }
+        },
+        {
+          "status": 500,
+          "weight": 5,
+          "label": "server_error",
+          "body": {
+            "error": {
+              "message": "The server had an error processing your request.",
+              "type": "server_error",
+              "param": null,
+              "code": null
+            }
+          }
+        },
+        {
+          "status": 503,
+          "weight": 3,
+          "label": "overloaded",
+          "body": {
+            "error": {
+              "message": "The engine is currently overloaded.",
+              "type": "server_error",
+              "param": null,
+              "code": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/completions",
+      "method": "POST",
+      "responses": [
+        {
+          "status": 200,
+          "body": {
+            "id": "cmpl-dummymock",
+            "object": "text_completion",
+            "created": 1700000000,
+            "model": "gpt-4",
+            "choices": [{ "text": "This is a mock completion response.", "index": 0, "finish_reason": "stop" }],
+            "usage": { "prompt_tokens": 5, "completion_tokens": 8, "total_tokens": 13 }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/embeddings",
+      "method": "POST",
+      "responses": [
+        {
+          "status": 200,
+          "body": {
+            "object": "list",
+            "data": [{ "object": "embedding", "embedding": [0.0023064255, -0.009327292, -0.0028842222, 0.012763155], "index": 0 }],
+            "model": "text-embedding-ada-002",
+            "usage": { "prompt_tokens": 8, "total_tokens": 8 }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/models",
+      "method": "GET",
+      "responses": [
+        {
+          "status": 200,
+          "body": {
+            "object": "list",
+            "data": [
+              { "id": "gpt-4", "object": "model", "created": 1687882411, "owned_by": "openai" },
+              { "id": "gpt-4-turbo", "object": "model", "created": 1706037777, "owned_by": "openai" },
+              { "id": "gpt-3.5-turbo", "object": "model", "created": 1677610602, "owned_by": "openai" },
+              { "id": "text-embedding-ada-002", "object": "model", "created": 1671217299, "owned_by": "openai" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "/models/{model}",
+      "method": "GET",
+      "responses": [
+        {
+          "status": 200,
+          "body": { "id": "gpt-4", "object": "model", "created": 1687882411, "owned_by": "openai" }
+        }
+      ]
+    }
+  ]
+}

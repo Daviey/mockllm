@@ -1,0 +1,10 @@
+/mockllm
+/mockllm-gen
+*.exe
+*.test
+*.out
+dist/
+providers-generated/
+providers-all/
+.idea/
+.vscode/

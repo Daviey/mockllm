@@ -1,0 +1,23 @@
+version: 2
+builds:
+  - main: ./cmd/mockllm
+    binary: mockllm
+    ldflags:
+      - -s -w -X github.com/Daviey/mockllm/internal/server.Version={{.Version}}
+archives:
+  - files:
+      - providers/**/*
+      - README.md
+      - LICENSE
+checksum:
+  name_template: "checksums.txt"
+dockers:
+  - image_templates:
+      - "ghcr.io/daviey/mockllm:{{.Version}}"
+      - "ghcr.io/daviey/mockllm:latest"
+    extra_files:
+      - providers
+release:
+  github:
+    owner: Daviey
+    name: mockllm
