@@ -277,7 +277,7 @@ func TestLoadAPI(t *testing.T) {
 	}
 	raw, _ := json.Marshal(data)
 	path := filepath.Join(dir, "api.json")
-	os.WriteFile(path, raw, 0644)
+	_ = os.WriteFile(path, raw, 0644)
 
 	loaded, err := LoadAPI(path)
 	if err != nil {
@@ -304,7 +304,7 @@ func TestLoadAPIFileNotFound(t *testing.T) {
 func TestLoadAPIInvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.json")
-	os.WriteFile(path, []byte(`not json`), 0644)
+	_ = os.WriteFile(path, []byte(`not json`), 0644)
 
 	_, err := LoadAPI(path)
 	if err == nil {
@@ -319,7 +319,7 @@ func TestFetchAPIWithTestServer(t *testing.T) {
 	raw, _ := json.Marshal(data)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(raw)
+		_, _ = w.Write(raw)
 	}))
 	defer ts.Close()
 

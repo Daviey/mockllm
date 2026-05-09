@@ -262,7 +262,9 @@ func TestCompactJSON(t *testing.T) {
 	dir := t.TempDir()
 	pretty := `{"name":"test","base_path":"/v1","endpoints":[{"path":"/chat","method":"POST","responses":[{"status":200,"body":  {"hello"  :  "world"  }}]}]}`
 	path := filepath.Join(dir, "test.json")
-	os.WriteFile(path, []byte(pretty), 0644)
+	if err := os.WriteFile(path, []byte(pretty), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	r := NewRegistry()
 	if err := r.LoadFile(path); err != nil {
@@ -303,7 +305,9 @@ func TestLoadDirInvalidPath(t *testing.T) {
 func TestLoadFileInvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.json")
-	os.WriteFile(path, []byte(`not json`), 0644)
+	if err := os.WriteFile(path, []byte(`not json`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	r := NewRegistry()
 	err := r.LoadFile(path)
@@ -316,7 +320,9 @@ func TestLoadFileValidationFail(t *testing.T) {
 	dir := t.TempDir()
 	data := `{"name":"","endpoints":[{"path":"/test","method":"GET","responses":[{"status":200}]}]}`
 	path := filepath.Join(dir, "bad.json")
-	os.WriteFile(path, []byte(data), 0644)
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	r := NewRegistry()
 	err := r.LoadFile(path)
