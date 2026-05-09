@@ -3,6 +3,7 @@
 *.exe
 *.test
 *.out
+coverage.out
 dist/
 providers-generated/
 providers-all/
