@@ -319,7 +319,7 @@ func TestFetchAPIWithTestServer(t *testing.T) {
 	raw, _ := json.Marshal(data)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(raw)
+		_, _ = w.Write(raw)
 	}))
 	defer ts.Close()
 

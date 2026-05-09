@@ -142,7 +142,9 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 	}
 	w.WriteHeader(resp.Status)
-	w.Write(resp.Body)
+	if _, err := w.Write(resp.Body); err != nil {
+		http.Error(w, "write error", http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) handleStream(w http.ResponseWriter, resp *provider.Response) {
@@ -199,7 +201,9 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	if v != nil {
 		enc := json.NewEncoder(w)
 		enc.SetEscapeHTML(false)
-		enc.Encode(v)
+		if err := enc.Encode(v); err != nil {
+			slog.Error("json encode error", "error", err)
+		}
 	}
 }
 

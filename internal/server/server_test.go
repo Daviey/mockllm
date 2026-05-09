@@ -63,7 +63,9 @@ func TestHealthEndpoint(t *testing.T) {
 	}
 
 	var body map[string]string
-	json.NewDecoder(w.Body).Decode(&body)
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
 	if body["status"] != "ok" {
 		t.Fatalf("expected ok, got %s", body["status"])
 	}
@@ -92,7 +94,9 @@ func TestMatchingEndpoint(t *testing.T) {
 	}
 
 	var body map[string]bool
-	json.NewDecoder(w.Body).Decode(&body)
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
 	if !body["ok"] {
 		t.Fatal("expected ok:true")
 	}
@@ -226,7 +230,9 @@ func TestVersionEndpoint(t *testing.T) {
 	}
 
 	var body map[string]string
-	json.NewDecoder(w.Body).Decode(&body)
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
 	if body["version"] != Version {
 		t.Fatalf("expected %s, got %s", Version, body["version"])
 	}
@@ -297,7 +303,7 @@ func TestNonPostDoesNotParseBody(t *testing.T) {
 func TestRequestLoggerMiddleware(t *testing.T) {
 	handler := requestLogger(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		io.WriteString(w, `{"ok":true}`)
+		_, _ = io.WriteString(w, `{"ok":true}`)
 	}))
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -472,7 +478,7 @@ func TestStatusWriterAuto200(t *testing.T) {
 	rec := httptest.NewRecorder()
 	sw := &statusWriter{ResponseWriter: rec, status: 200}
 
-	sw.Write([]byte("hello"))
+	_, _ = sw.Write([]byte("hello"))
 
 	if sw.status != 200 {
 		t.Fatalf("expected auto-set status 200, got %d", sw.status)
