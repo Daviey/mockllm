@@ -291,3 +291,108 @@ func searchString(s, sub string) bool {
 	}
 	return false
 }
+
+func TestLoadDirInvalidPath(t *testing.T) {
+	r := NewRegistry()
+	err := r.LoadDir("/nonexistent/path")
+	if err == nil {
+		t.Fatal("expected error for nonexistent dir")
+	}
+}
+
+func TestLoadFileInvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bad.json")
+	os.WriteFile(path, []byte(`not json`), 0644)
+
+	r := NewRegistry()
+	err := r.LoadFile(path)
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestLoadFileValidationFail(t *testing.T) {
+	dir := t.TempDir()
+	data := `{"name":"","endpoints":[{"path":"/test","method":"GET","responses":[{"status":200}]}]}`
+	path := filepath.Join(dir, "bad.json")
+	os.WriteFile(path, []byte(data), 0644)
+
+	r := NewRegistry()
+	err := r.LoadFile(path)
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+}
+
+func TestCompactJSONNil(t *testing.T) {
+	result := compactJSON(nil)
+	if result != nil {
+		t.Fatalf("expected nil, got %s", result)
+	}
+}
+
+func TestCompactJSONInvalid(t *testing.T) {
+	result := compactJSON(json.RawMessage(`not valid json {`))
+	if string(result) != `not valid json {` {
+		t.Fatalf("expected passthrough of invalid JSON, got %s", result)
+	}
+}
+
+func TestMatchMethodInsensitive(t *testing.T) {
+	r := NewRegistry()
+	r.Register(&Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []Endpoint{
+			{Path: "/test", Method: "post", Responses: []Response{
+				{Status: 200, Body: json.RawMessage(`{}`)},
+			}},
+		},
+	})
+
+	_, _, found := r.Match("POST", "/test", false)
+	if !found {
+		t.Fatal("expected match with uppercase POST for lowercase post method")
+	}
+}
+
+func TestSelectResponseDefaultNonStream(t *testing.T) {
+	r := NewRegistry()
+	r.Register(&Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []Endpoint{
+			{Path: "/test", Method: "POST", Responses: []Response{
+				{Status: 200, Stream: true, Body: json.RawMessage(`{"stream":true}`)},
+				{Status: 200, Body: json.RawMessage(`{"stream":false}`)},
+			}},
+		},
+	})
+
+	_, resp, _ := r.Match("POST", "/test", false)
+	if resp.Stream {
+		t.Fatal("expected non-stream response when wantsStream=false")
+	}
+}
+
+func TestWeightedAllZeroFallsToFirst(t *testing.T) {
+	r := NewRegistry()
+	r.Register(&Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []Endpoint{
+			{Path: "/test", Method: "POST", MatchMode: "weighted", Responses: []Response{
+				{Status: 200, Weight: 0, Label: "first"},
+				{Status: 500, Weight: 0, Label: "second"},
+			}},
+		},
+	})
+
+	for i := 0; i < 10; i++ {
+		_, resp, _ := r.Match("POST", "/test", false)
+		if resp.Label != "first" {
+			t.Fatalf("all-zero weights should return first, got %s on call %d", resp.Label, i)
+		}
+	}
+}

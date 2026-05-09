@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Daviey/mockllm/internal/provider"
 )
@@ -305,5 +306,227 @@ func TestRequestLoggerMiddleware(t *testing.T) {
 
 	if w.Code != 200 {
 		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestStreamingBodyFallback(t *testing.T) {
+	r := provider.NewRegistry()
+	r.Register(&provider.Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []provider.Endpoint{
+			{
+				Path:   "/stream-body",
+				Method: "POST",
+				Responses: []provider.Response{
+					{
+						Status: 200,
+						Stream: true,
+						Body:   json.RawMessage(`{"text":"hello from body"}`),
+					},
+				},
+			},
+		},
+	})
+	srv := New(r, 0)
+
+	req := httptest.NewRequest("POST", "/stream-body", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+	srv.handleRequest(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, `{"text":"hello from body"}`) {
+		t.Fatalf("expected body content in SSE, got %s", body)
+	}
+	if !strings.Contains(body, "[DONE]") {
+		t.Fatal("expected [DONE]")
+	}
+}
+
+func TestStreamingWithDelay(t *testing.T) {
+	r := provider.NewRegistry()
+	r.Register(&provider.Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []provider.Endpoint{
+			{
+				Path:   "/stream-delay",
+				Method: "POST",
+				Responses: []provider.Response{
+					{
+						Status: 200,
+						Stream: true,
+						Delay:  "1ms",
+						StreamChunks: []provider.StreamChunk{
+							{Data: json.RawMessage(`{"a":1}`), Delay: "1ms"},
+							{Data: json.RawMessage(`{"b":2}`)},
+						},
+					},
+				},
+			},
+		},
+	})
+	srv := New(r, 0)
+
+	req := httptest.NewRequest("POST", "/stream-delay", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+	srv.handleRequest(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, `{"a":1}`) || !strings.Contains(body, `{"b":2}`) {
+		t.Fatalf("expected both chunks, got %s", body)
+	}
+}
+
+func TestStreamingWithHeaders(t *testing.T) {
+	r := provider.NewRegistry()
+	r.Register(&provider.Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []provider.Endpoint{
+			{
+				Path:   "/stream-headers",
+				Method: "POST",
+				Responses: []provider.Response{
+					{
+						Status:  200,
+						Stream:  true,
+						Headers: map[string]string{"X-Stream-Custom": "yes"},
+						StreamChunks: []provider.StreamChunk{
+							{Data: json.RawMessage(`{"ok":true}`)},
+						},
+					},
+				},
+			},
+		},
+	})
+	srv := New(r, 0)
+
+	req := httptest.NewRequest("POST", "/stream-headers", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+	srv.handleRequest(w, req)
+
+	if v := w.Header().Get("X-Stream-Custom"); v != "yes" {
+		t.Fatalf("expected X-Stream-Custom=yes, got %s", v)
+	}
+}
+
+func TestDelayResponse(t *testing.T) {
+	r := provider.NewRegistry()
+	r.Register(&provider.Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []provider.Endpoint{
+			{
+				Path:   "/delayed",
+				Method: "POST",
+				Responses: []provider.Response{
+					{
+						Status: 200,
+						Delay:  "10ms",
+						Body:   json.RawMessage(`{"delayed":true}`),
+					},
+				},
+			},
+		},
+	})
+	srv := New(r, 0)
+
+	start := time.Now()
+	req := httptest.NewRequest("POST", "/delayed", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+	srv.handleRequest(w, req)
+	elapsed := time.Since(start)
+
+	if elapsed < 10*time.Millisecond {
+		t.Fatalf("expected delay >= 10ms, got %v", elapsed)
+	}
+}
+
+func TestCORSPassThrough(t *testing.T) {
+	handler := corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+
+	req := httptest.NewRequest("GET", "/anything", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200 for non-OPTIONS, got %d", w.Code)
+	}
+	if origin := w.Header().Get("Access-Control-Allow-Origin"); origin != "*" {
+		t.Fatalf("expected CORS header on all requests, got %s", origin)
+	}
+}
+
+func TestStatusWriterAuto200(t *testing.T) {
+	rec := httptest.NewRecorder()
+	sw := &statusWriter{ResponseWriter: rec, status: 200}
+
+	sw.Write([]byte("hello"))
+
+	if sw.status != 200 {
+		t.Fatalf("expected auto-set status 200, got %d", sw.status)
+	}
+}
+
+func TestNilResponseBody(t *testing.T) {
+	r := provider.NewRegistry()
+	r.Register(&provider.Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []provider.Endpoint{
+			{
+				Path:   "/nil-response",
+				Method: "POST",
+				Responses: []provider.Response{
+					{Status: 200},
+				},
+			},
+		},
+	})
+	srv := New(r, 0)
+
+	req := httptest.NewRequest("POST", "/nil-response", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+	srv.handleRequest(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestInvalidDelayIgnored(t *testing.T) {
+	r := provider.NewRegistry()
+	r.Register(&provider.Provider{
+		Name:     "test",
+		BasePath: "",
+		Endpoints: []provider.Endpoint{
+			{
+				Path:   "/bad-delay",
+				Method: "POST",
+				Responses: []provider.Response{
+					{Status: 200, Delay: "not-a-duration", Body: json.RawMessage(`{}`)},
+				},
+			},
+		},
+	})
+	srv := New(r, 0)
+
+	req := httptest.NewRequest("POST", "/bad-delay", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+	srv.handleRequest(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200 even with bad delay, got %d", w.Code)
 	}
 }
