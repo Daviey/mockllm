@@ -1,7 +1,8 @@
 FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
-COPY go.mod go.sum ./
+COPY go.mod ./
+COPY go.sum* ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/Daviey/mockllm/internal/server.Version=$(git describe --tags --always 2>/dev/null || echo dev)" -o mockllm ./cmd/mockllm
