@@ -46,6 +46,7 @@ jobs:
           curl -sf http://localhost:8080/_health
           curl -sf http://localhost:8080/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"gpt-4","messages":[]}'
           curl -sf http://localhost:8080/v1/models
+          curl -sf http://localhost:8080/v1/messages -H "Content-Type: application/json" -d '{"model":"claude-3","messages":[],"max_tokens":10}'
           kill %1
 
   docker:
